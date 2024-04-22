@@ -18,9 +18,14 @@ class Hdu:
         self.index: int = index
         self.header: dict = header
         self.data: np.ndarray = data
+    def __repr__(self):
+        return f"<{self.path}> {self.header['TIME-OBS']}{self.index}"
 
 
 class Observations:
+    """
+        WORKS WITH FILTERLESS DATA (SPECTOGRAPH), DOESNT DESTINGUISH BETWEEN FILTERS
+    """
     def __init__(self, hdus: list):
         self.hdus = hdus
         d = {}
@@ -32,10 +37,53 @@ class Observations:
                 d[type] = [hdu]
             print(d[type] + [hdu])
             d[type] = d[type] + [hdu]
-
-
         print(d)
         self.hdu_sep = d
+
+    def remove_hdu(self, hdus: list):
+        for hdu in hdus:
+            type = hdu.header.get("IMAGETYP", "NO_IMTYPE")
+            self.hdu_sep[type].remove(hdu)
+    def create_masters(self):
+        self.masterbias = self.get_masterbias()
+        self.masterdark = self.get_masterdark()
+        self.masterflat = self.get_masterflat()
+        self.masterlight = self.get_masterlight()
+
+    def get_masterbias(self):
+        biasstack = []
+        for bias in self.hdu_sep["Bias Frame"]:
+            biasstack.append(bias.data)
+        stack = np.stack(biasstack)
+        return np.median(stack, axis=0)
+
+    def get_masterdark(self):
+        darkstack = []
+        for dark in self.hdu_sep["Dark Frame"]:
+            dark_adj = (dark.data - self.masterbias)/dark.header["EXPTIME"]
+            darkstack.append(dark_adj)
+        stack = np.stack(darkstack)
+        return np.median(stack, axis=0)
+
+    def get_masterflat(self):
+        flatstack = []
+        for flat in self.hdu_sep["Light Frame"]:
+            flat_adj = (flat.data - self.masterbias - self.masterdark*flat.header["EXPTIME"])
+            flat_median = np.median(flat_adj)
+            flat_norm = flat_adj/flat_median
+            flatstack.append(flat_norm)
+        stack = np.stack(flatstack)
+        return np.median(stack, axis=0)/np.median(stack)
+
+    def get_masterlight(self):
+        lightstack = []
+        for light in self.hdu_sep["Light Frame"]:
+            light_adj = (light.data - self.masterbias - self.masterdark*light.header["EXPTIME"])/self.masterflat
+            lightstack.append(light_adj)
+        stack = np.stack(lightstack)
+        return stack
+
+
 class FitsHandler:
     filetypes = [".FIT", ".fits"]
     def __init__(self,
