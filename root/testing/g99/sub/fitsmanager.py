@@ -40,10 +40,9 @@ class Observations:
         print(d)
         self.hdu_sep = d
 
-    def remove_hdu(self, hdus: list):
-        for hdu in hdus:
-            type = hdu.header.get("IMAGETYP", "NO_IMTYPE")
-            self.hdu_sep[type].remove(hdu)
+    def include_type(self, type: str, start: int, stop: int):
+        self.hdu_sep[type] = self.hdu_sep[type][start:stop]
+
     def create_masters(self):
         self.masterbias = self.get_masterbias()
         self.masterdark = self.get_masterdark()
@@ -78,11 +77,14 @@ class Observations:
     def get_masterlight(self):
         lightstack = []
         for light in self.hdu_sep["Light Frame"]:
-            light_adj = (light.data - self.masterbias - self.masterdark*light.header["EXPTIME"])/self.masterflat
+            light_adj = ((light.data - self.masterbias - self.masterdark*light.header["EXPTIME"])
+                         /np.where(self.masterflat!=0, self.masterflat, 0.001)) #getting /0 errors
             lightstack.append(light_adj)
         stack = np.stack(lightstack)
-        return stack
+        return np.median(stack, axis=0)
 
+    def display_final(self):
+        pass
 
 class FitsHandler:
     filetypes = [".FIT", ".fits"]
