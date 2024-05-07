@@ -1,0 +1,4 @@
+Wanted to make a little to do list so I know what still has to be done. ref: https://gmos-ifu-1-data-reduction-tutorial-gemini-iraf.readthedocs.io/en/latest/installation.html
+ 1) Instead of current flat calibration I would like to use vega as our standard star to make a sensitivity curve.
+ 2) Shift and stretch x-axis of the entire spectrum 
+ 3) Remove the light pollution (use daytime spectrum?)
