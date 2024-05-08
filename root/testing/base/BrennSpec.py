@@ -14,15 +14,6 @@ class Spectrum:
         self.flat_array = None
 
 
-    def magic_numbers(self):
-        """Forgive me father for I have fudged the dice"""
-        testx = np.linspace(177, 1000, self.array.size)
-        testx *= 1e-9
-        testy = self.blackbody_curve(testx)
-        offset = 350
-        y = testy*1.1e-11+offset
-        return y
-
     def get_peaks(self, *args, **kwargs) -> tuple[list[float], list[float]]:
         cut_array = self.peak_cut(*args, **kwargs)
         seperated_peaks = self.separate_peaks(cut_array)
@@ -75,28 +66,32 @@ class Spectrum:
             raise ValueError(f"invalid input: {type}\nInput must be 'E' for emission or 'A' for absorption")
         self.type = type
 
-
-class EmissionSpectrum(Spectrum):
-    def __init__(self, array: NDArray[float]):
-        super().__init__(array, 'E')
-        self.flat_array: NDArray[float] = array
-
-    def peak_cut_function(self, slope=0.07) -> NDArray:
-        data = self.array
-        x_max = data.argmax()
-        shape = np.linspace(x_max, data.size, data.size-x_max)
-        base = np.median(np.abs(data))
-        start = 0.65 * data.max()
-        right_curve = (start * np.exp(-(shape-x_max)/(slope*data.size)) + base)
-        left_curve = (start * np.exp(-(shape-x_max)/(slope*data.size)) + base)[x_max-1::-1]
-        extract = np.array(list(left_curve)+list(right_curve))
-        return extract
+    def magic_numbers(self, start=177, stop=1000, temperature=9000, offset=350, scale=1.1e-11):
+        """Forgive me father for I have fudged the dice"""
+        temperature += 2000
+        testx = np.linspace(start, stop, self.array.size)
+        testx *= 1e-9
+        testy = self.blackbody_curve(testx, temperature)
+        y = testy*scale+offset
+        return y
 
 class AbsorptionSpectrum(Spectrum):
-    def __init__(self, array: NDArray[float]):
+    def __init__(self, array: NDArray[float], magic: list[int, int, float, float, float]=None):
         super().__init__(array, 'A')
         self.blackbody = self.magic_numbers()
-        self.flat_array: NDArray[float] = self.magic_numbers()-self.array
+        if magic is None:
+            self.flat_array: NDArray[float] = self.magic_numbers()-self.array
+        else:
+            self.flat_array: NDArray[float] = self.magic_numbers(*magic)-self.array
+
+    def blackbody_curve(self, wavelength: NDArray, temperature: float = 11000, base: float = 0):
+        c = 3*10**8
+        h = 6.26*10**-34
+        kB = 1.38*10**-23
+        c1, c2 = 2*h*c**2, h*c/kB
+        wl = np.array(wavelength)
+        curve = c1 / wl ** 5 * (1 / (np.exp(c2 / (wl * temperature)) - 1)) + base
+        return curve
 
     def get_peaks(self, *args, **kwargs) -> tuple[list[float], list[float]]:
 
@@ -113,15 +108,6 @@ class AbsorptionSpectrum(Spectrum):
             ycoords.append(-val[1]+y[val[0]])
         return xcoords, ycoords
 
-    def blackbody_curve(self, wavelength: NDArray, temperature: float = 11000, base: float = 0):
-        c = 3*10**8
-        h = 6.26*10**-34
-        kB = 1.38*10**-23
-        c1, c2 = 2*h*c**2, h*c/kB
-        wl = np.array(wavelength)
-        curve = c1 / wl ** 5 * (1 / (np.exp(c2 / (wl * temperature)) - 1)) + base
-        return curve
-
     def peak_cut_function(self, left_slope: float = 0.05, right_slope: float = 0.2) -> NDArray:
         data = self.blackbody - self.array
         x_max = data.argmax()
@@ -129,5 +115,21 @@ class AbsorptionSpectrum(Spectrum):
         base = np.median(np.abs(data))
         right_curve = 0.65*data.max() * np.exp(-(right_shape-x_max)/(right_slope*data.size)) + base
         left_curve = (0.65*data.max() * np.exp(-(right_shape-x_max)/(left_slope*data.size)) + base)[x_max-1::-1]
+        extract = np.array(list(left_curve)+list(right_curve))
+        return extract
+
+class EmissionSpectrum(Spectrum):
+    def __init__(self, array: NDArray[float]):
+        super().__init__(array, 'E')
+        self.flat_array: NDArray[float] = array
+
+    def peak_cut_function(self, slope=0.07) -> NDArray:
+        data = self.array
+        x_max = data.argmax()
+        shape = np.linspace(x_max, data.size, data.size-x_max)
+        base = np.median(np.abs(data))
+        start = 0.65 * data.max()
+        right_curve = (start * np.exp(-(shape-x_max)/(slope*data.size)) + base)
+        left_curve = (start * np.exp(-(shape-x_max)/(slope*data.size)) + base)[x_max-1::-1]
         extract = np.array(list(left_curve)+list(right_curve))
         return extract
