@@ -1,0 +1,1 @@
+from g99.fitsmanager import FitsHandler

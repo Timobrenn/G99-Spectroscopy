@@ -6,7 +6,7 @@ Description:
 from astropy.io import fits
 from pathlib import Path
 import numpy as np
-from dataclasses import dataclass
+
 
 _ = "Not a script, do not run"
 
@@ -24,7 +24,7 @@ class Hdu:
 
 class Observations:
     """
-        WORKS WITH FILTERLESS DATA (SPECTOGRAPH), DOESNT DESTINGUISH BETWEEN FILTERS
+        WORKS WITH FILTERLESS DATA (SPECTOGRAPH), DOESNT DISTINGUISH BETWEEN FILTERS
     """
     def __init__(self, hdus: list):
         self.hdus = hdus
@@ -32,7 +32,8 @@ class Observations:
         print(hdus)
         for hdu in hdus:
             type = hdu.header.get("IMAGETYP", "NO_IMTYPE")
-            assert not [hdu] is None
+            if not [hdu] is None:
+                raise ValueError
             if not d.get(type, None):
                 d[type] = [hdu]
             print(d[type] + [hdu])
@@ -42,6 +43,8 @@ class Observations:
 
     def include_type(self, type: str, start: int, stop: int):
         self.hdu_sep[type] = self.hdu_sep[type][start:stop]
+
+    #### --== Change below to stefan's code ==-- ####
 
     def create_masters(self):
         self.masterbias = self.get_masterbias()

@@ -7,6 +7,7 @@
 import numpy as np
 from numpy.typing import NDArray
 
+
 class Spectrum:
     def __init__(self, array: NDArray[float], type_: str) -> None:
         self.array = array
