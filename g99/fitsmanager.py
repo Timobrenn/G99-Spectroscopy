@@ -24,25 +24,30 @@ class Hdu:
 
 class Observations:
     """
-        WORKS WITH FILTERLESS DATA (SPECTOGRAPH), DOESNT DISTINGUISH BETWEEN FILTERS
+        input:
+            - hdus: list of hdu objects
+
+        attributes:
+            - hdus: list of HDU objects
+            - files: dict of HDU objects seperated out into respective file types
     """
     def __init__(self, hdus: list):
         self.hdus = hdus
         d = {}
-        print(hdus)
-        for hdu in hdus:
-            type = hdu.header.get("IMAGETYP", "NO_IMTYPE")
-            if not [hdu] is None:
-                raise ValueError
-            if not d.get(type, None):
-                d[type] = [hdu]
-            print(d[type] + [hdu])
-            d[type] = d[type] + [hdu]
-        print(d)
-        self.hdu_sep = d
+        #[print(hdu) for hdu in hdus]
+        for i, hdu in enumerate(hdus):
+            print(hdu)
+            type_ = hdu.header.get("IMAGETYP", "NO_IMTYPE")
+            if hdu is None:
+                raise ValueError("hdu from hdulist is None")
+            if not d.get(type_, None):
+                d[type_] = [hdu]
+            d[type_] += [hdu]
+        print(f"added {i} files")
+        self.files = d
 
-    def include_type(self, type: str, start: int, stop: int):
-        self.hdu_sep[type] = self.hdu_sep[type][start:stop]
+    def include_type(self, type_: str, start: int, stop: int):
+        self.hdu_sep[type_] = self.hdu_sep[type_][start:stop]
 
     #### --== Change below to stefan's code ==-- ####
 
